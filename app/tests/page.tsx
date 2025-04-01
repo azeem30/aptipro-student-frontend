@@ -109,42 +109,26 @@ export default function TestsPage() {
     return matchesSearch && matchesDifficulty && matchesSubject
   })
 
-  // Get unique subjects for filter
   const subjects = Array.from(new Set(tests.map((test) => test.subject).filter(Boolean)))
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString)
+      const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        return "Invalid date"
+        return "Invalid date";
       }
-      
-      // Manually format the date to avoid timezone issues
-      const options: Intl.DateTimeFormatOptions = {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }
-      
-      // Get the UTC components
-      const utcHours = date.getUTCHours()
-      const utcMinutes = date.getUTCMinutes()
-      const ampm = utcHours >= 12 ? 'PM' : 'AM'
-      const hours12 = utcHours % 12 || 12
-      
-      // Format the date part
-      const datePart = new Intl.DateTimeFormat('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      }).format(date)
-      
-      return `${datePart}, ${hours12}:${utcMinutes.toString().padStart(2, '0')} ${ampm}`
+      const utcHours = date.getUTCHours();
+      const utcMinutes = date.getUTCMinutes();
+      const ampm = utcHours >= 12 ? 'PM' : 'AM';
+      const hours12 = utcHours % 12 || 12;
+      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const weekday = weekdays[date.getUTCDay()];
+      const month = months[date.getUTCMonth()];
+      const day = date.getUTCDate();  
+      return `${weekday}, ${month} ${day}, ${hours12}:${utcMinutes.toString().padStart(2, '0')} ${ampm} UTC`;
     } catch {
-      return "Invalid date"
+      return "Invalid date";
     }
   }
 
@@ -161,35 +145,17 @@ export default function TestsPage() {
     }
   }
 
-  // Check if test is available (scheduled time has passed)
-  // Check if test is available (scheduled time has passed)
-const isTestAvailable = (test: Test) => {
-  try {
-    const scheduledDate = new Date(test.scheduled_at);
-    // Compare in UTC to avoid timezone issues
-    const scheduledUTC = Date.UTC(
-      scheduledDate.getFullYear(),
-      scheduledDate.getMonth(),
-      scheduledDate.getDate(),
-      scheduledDate.getHours(),
-      scheduledDate.getMinutes(),
-      scheduledDate.getSeconds()
-    );
-    
-    const currentUTC = Date.UTC(
-      currentTime.getFullYear(),
-      currentTime.getMonth(),
-      currentTime.getDate(),
-      currentTime.getHours(),
-      currentTime.getMinutes(),
-      currentTime.getSeconds()
-    );
-    
-    return scheduledUTC <= currentUTC;
-  } catch {
-    return false;
-  }
-}
+  const isTestAvailable = (test: Test) => {
+    try {
+      const scheduledUTC = new Date(test.scheduled_at).getTime();
+      const currentUTC = Date.now();
+      const currentIST = currentUTC + (5.5 * 60 * 60 * 1000);
+      return scheduledUTC <= currentIST;
+    } catch (err) {
+      console.error('Date parsing error:', err);
+      return false;
+    }
+  };
 
   if (loading) {
     return (
