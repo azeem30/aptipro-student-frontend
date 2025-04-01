@@ -162,14 +162,34 @@ export default function TestsPage() {
   }
 
   // Check if test is available (scheduled time has passed)
-  const isTestAvailable = (test: Test) => {
-    try {
-      const scheduledDate = new Date(test.scheduled_at) 
-      return scheduledDate.getTime() <= currentTime.getTime()
-    } catch {
-      return false
-    }
+  // Check if test is available (scheduled time has passed)
+const isTestAvailable = (test: Test) => {
+  try {
+    const scheduledDate = new Date(test.scheduled_at);
+    // Compare in UTC to avoid timezone issues
+    const scheduledUTC = Date.UTC(
+      scheduledDate.getFullYear(),
+      scheduledDate.getMonth(),
+      scheduledDate.getDate(),
+      scheduledDate.getHours(),
+      scheduledDate.getMinutes(),
+      scheduledDate.getSeconds()
+    );
+    
+    const currentUTC = Date.UTC(
+      currentTime.getFullYear(),
+      currentTime.getMonth(),
+      currentTime.getDate(),
+      currentTime.getHours(),
+      currentTime.getMinutes(),
+      currentTime.getSeconds()
+    );
+    
+    return scheduledUTC <= currentUTC;
+  } catch {
+    return false;
   }
+}
 
   if (loading) {
     return (
