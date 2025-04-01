@@ -119,18 +119,30 @@ export default function TestsPage() {
         return "Invalid date"
       }
       
-      // Convert to local time but keep the same absolute time
-      const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      // Manually format the date to avoid timezone issues
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }
       
-      return new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: 'UTC' // Add this to prevent timezone conversion
-      }).format(localDate)
+      // Get the UTC components
+      const utcHours = date.getUTCHours()
+      const utcMinutes = date.getUTCMinutes()
+      const ampm = utcHours >= 12 ? 'PM' : 'AM'
+      const hours12 = utcHours % 12 || 12
+      
+      // Format the date part
+      const datePart = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      }).format(date)
+      
+      return `${datePart}, ${hours12}:${utcMinutes.toString().padStart(2, '0')} ${ampm}`
     } catch {
       return "Invalid date"
     }
@@ -152,8 +164,8 @@ export default function TestsPage() {
   // Check if test is available (scheduled time has passed)
   const isTestAvailable = (test: Test) => {
     try {
-      const scheduledDate = new Date(test.scheduled_at)
-      return scheduledDate <= currentTime
+      const scheduledDate = new Date(test.scheduled_at) 
+      return scheduledDate.getTime() <= currentTime.getTime()
     } catch {
       return false
     }
