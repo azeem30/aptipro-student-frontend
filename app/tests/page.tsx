@@ -118,13 +118,19 @@ export default function TestsPage() {
       if (isNaN(date.getTime())) {
         return "Invalid date"
       }
+      
+      // Convert to local time but keep the same absolute time
+      const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      
       return new Intl.DateTimeFormat("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
-      }).format(date)
+        hour12: true,
+        timeZone: 'UTC' // Add this to prevent timezone conversion
+      }).format(localDate)
     } catch {
       return "Invalid date"
     }
