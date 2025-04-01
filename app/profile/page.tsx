@@ -11,11 +11,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { User, Mail, BookOpen, BarChart3, Settings, LogOut } from "lucide-react"
+import { useEffect, useState } from "react"
 
 export default function ProfilePage() {
   
-  const userData = localStorage.getItem("aptipro-user")
-  const user = userData ? JSON.parse(userData) : null
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    // This code will only run on the client side
+    const userData = localStorage.getItem("aptipro-user")
+    setUser(userData ? JSON.parse(userData) : null)
+  }, [])
+
+  if (!user) {
+    return <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1 container py-8 flex items-center justify-center">
+        <div>Loading...</div>
+      </main>
+    </div>
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
