@@ -12,16 +12,118 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { User, Mail, BookOpen, BarChart3, Settings, LogOut } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function ProfilePage() {
-  
+  const { toast } = useToast()
   const [user, setUser] = useState<any>(null)
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    department: "",
+    password: "",
+    confirmPassword: ""
+  })
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    // This code will only run on the client side
     const userData = localStorage.getItem("aptipro-user")
-    setUser(userData ? JSON.parse(userData) : null)
+    if (userData) {
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      const [firstName, ...lastNameParts] = parsedUser.name.split(" ")
+      setFormData({
+        firstName,
+        lastName: lastNameParts.join(" "),
+        email: parsedUser.email,
+        department: parsedUser.department,
+        password: "",
+        confirmPassword: ""
+      })
+    }
   }, [])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }))
+  }
+
+  const handleDepartmentChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      department: value
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (formData.password && formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update_profile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user?.id,
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          email: formData.email,
+          department: formData.department,
+          password: formData.password || undefined 
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update profile")
+      }
+
+      const updatedUser = {
+        ...user,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        department: formData.department
+      }
+      
+      localStorage.setItem("aptipro-user", JSON.stringify(updatedUser))
+      setUser(updatedUser)
+
+      setFormData(prev => ({
+        ...prev,
+        password: "",
+        confirmPassword: ""
+      }))
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   if (!user) {
     return <div className="min-h-screen flex flex-col">
@@ -130,53 +232,88 @@ export default function ProfilePage() {
                       <CardDescription>Update your account information and preferences</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="first-name">First name</Label>
-                            <Input id="first-name" defaultValue="John" />
+                      <form onSubmit={handleSubmit}>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="firstName">First name</Label>
+                              <Input 
+                                id="firstName" 
+                                value={formData.firstName} 
+                                onChange={handleInputChange}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="lastName">Last name</Label>
+                              <Input 
+                                id="lastName" 
+                                value={formData.lastName} 
+                                onChange={handleInputChange}
+                                required
+                              />
+                            </div>
                           </div>
+
                           <div className="space-y-2">
-                            <Label htmlFor="last-name">Last name</Label>
-                            <Input id="last-name" defaultValue="Doe" />
+                            <Label htmlFor="email">Email</Label>
+                            <Input 
+                              id="email" 
+                              type="email" 
+                              value={formData.email} 
+                              onChange={handleInputChange}
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="department">Department</Label>
+                            <Select 
+                              value={formData.department} 
+                              onValueChange={handleDepartmentChange}
+                            >
+                              <SelectTrigger id="department">
+                                <SelectValue placeholder="Select your department" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Mechanical">Mechanical</SelectItem>
+                                <SelectItem value="Electrical">Electrical</SelectItem>
+                                <SelectItem value="EXTC">EXTC</SelectItem>
+                                <SelectItem value="Computer Science">Computer Science</SelectItem>
+                                <SelectItem value="Information Technology">Information Technology</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="password">New Password</Label>
+                            <Input 
+                              id="password" 
+                              type="password" 
+                              value={formData.password} 
+                              onChange={handleInputChange}
+                              placeholder="Leave blank to keep current password"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="confirmPassword">Confirm Password</Label>
+                            <Input 
+                              id="confirmPassword" 
+                              type="password" 
+                              value={formData.confirmPassword} 
+                              onChange={handleInputChange}
+                              placeholder="Leave blank to keep current password"
+                            />
                           </div>
                         </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email</Label>
-                          <Input id="email" type="email" defaultValue={user.email} />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="department">Department</Label>
-                          <Select defaultValue={user.department.toLowerCase().replace(" ", "")}>
-                            <SelectTrigger id="department">
-                              <SelectValue placeholder="Select your department" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mechanical">Mechanical</SelectItem>
-                              <SelectItem value="electrical">Electrical</SelectItem>
-                              <SelectItem value="extc">EXTC</SelectItem>
-                              <SelectItem value="computer">Computer Science</SelectItem>
-                              <SelectItem value="it">Information Technology</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="password">New Password</Label>
-                          <Input id="password" type="password" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="confirm-password">Confirm Password</Label>
-                          <Input id="confirm-password" type="password" />
-                        </div>
-                      </div>
+                        <CardFooter className="border-t pt-6 px-0 pb-0">
+                          <Button type="submit" disabled={isLoading}>
+                            {isLoading ? "Saving..." : "Save Changes"}
+                          </Button>
+                        </CardFooter>
+                      </form>
                     </CardContent>
-                    <CardFooter className="border-t pt-6">
-                      <Button>Save Changes</Button>
-                    </CardFooter>
                   </Card>
                 </TabsContent>
                 <TabsContent value="performance" className="mt-6">
@@ -299,4 +436,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-
