@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -17,6 +18,7 @@ import { useToast } from "@/components/ui/use-toast"
 export default function ProfilePage() {
   const { toast } = useToast()
   const [user, setUser] = useState<any>(null)
+  const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -27,10 +29,16 @@ export default function ProfilePage() {
   })
   const [isLoading, setIsLoading] = useState(false)
 
+  const handleLogout = () => {
+    localStorage.removeItem("aptipro-user") 
+    router.push("/login") 
+  }
+
   useEffect(() => {
     const userData = localStorage.getItem("aptipro-user")
     if (userData) {
       const parsedUser = JSON.parse(userData)
+      console.log(parsedUser.recent_results)
       setUser(parsedUser)
       const [firstName, ...lastNameParts] = parsedUser.name.split(" ")
       setFormData({
@@ -89,7 +97,6 @@ export default function ProfilePage() {
       })
 
       const data = await response.json()
-
       if (!response.ok) {
         throw new Error(data.message || "Failed to update profile")
       }
@@ -201,17 +208,13 @@ export default function ProfilePage() {
                       <div className="text-xs text-muted-foreground">Tests Completed</div>
                     </div>
                     <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{user.average_score}%</div>
+                      <div className="text-2xl font-bold text-primary">{user.average_score / 100}%</div>
                       <div className="text-xs text-muted-foreground">Average Score</div>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="border-t flex justify-between">
-                  <Button variant="outline" size="sm">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout
                   </Button>
@@ -318,114 +321,139 @@ export default function ProfilePage() {
                 </TabsContent>
                 <TabsContent value="performance" className="mt-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Performance Analytics</CardTitle>
-                      <CardDescription>View your test performance and progress over time</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+                  <CardHeader>
+                    <CardTitle>Performance Analytics</CardTitle>
+                    <CardDescription>View your test performance and progress over time</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {user.recent_results && user.recent_results.length > 0 ? (
+                    <>
                       <div className="rounded-lg border p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-medium">Score Distribution</h3>
-                          <Badge variant="outline" className="font-mono">
-                            <BarChart3 className="mr-1 h-3 w-3" />
-                            Last 10 Tests
-                          </Badge>
-                        </div>
-                        <div className="h-[200px] flex items-end gap-2">
-                          {[65, 72, 58, 80, 75, 90, 85, 78, 82, 88].map((score, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                              <div
-                                className={`w-full rounded-t-sm ${
-                                  score >= 80 ? "bg-green-500" : score >= 60 ? "bg-yellow-500" : "bg-red-500"
-                                }`}
-                                style={{ height: `${score * 1.8}px` }}
-                              ></div>
-                              <span className="text-xs text-muted-foreground">{score}%</span>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium">Recent Test Scores</h3>
+                        <Badge variant="outline" className="font-mono">
+                        <BarChart3 className="mr-1 h-3 w-3" />
+                        Last {user.recent_results.length} Tests
+                        </Badge>
+                      </div>
+                      <div className="h-[200px] flex items-end gap-2">
+                        {user.recent_results.map((result: any, i: number) => {
+                        const percentage = (result.marks / 30) * 100; // Assuming max marks is 30
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <div
+                            className={`w-full rounded-t-sm ${
+                            percentage >= 80
+                              ? "bg-green-500"
+                              : percentage >= 60
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
+                            }`}
+                            style={{ height: `${percentage * 1.8}px` }}
+                          ></div>
+                          <span className="text-xs text-muted-foreground">{Math.round(percentage)}%</span>
+                          <span className="text-xs text-muted-foreground truncate max-w-full">
+                            {result.name}
+                          </span>
+                          </div>
+                        );
+                        })}
+                      </div>
                       </div>
 
                       <div className="grid md:grid-cols-2 gap-6">
-                        <div className="rounded-lg border p-6">
-                          <h3 className="text-lg font-medium mb-4">Subject Performance</h3>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Mathematics</span>
-                                <span className="font-medium">85%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 w-[85%]"></div>
-                              </div>
+                      <div className="rounded-lg border p-6">
+                        <h3 className="text-lg font-medium mb-4">Subject Performance</h3>
+                        <div className="space-y-4">
+                        {user.recent_results.map((result: any) => {
+                          const percentage = (result.marks / 30) * 100;
+                          return (
+                          <div key={result.name} className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                            <span>{result.name}</span>
+                            <span className="font-medium">{Math.round(percentage)}%</span>
                             </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Logic</span>
-                                <span className="font-medium">78%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-yellow-500 w-[78%]"></div>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>General Aptitude</span>
-                                <span className="font-medium">92%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 w-[92%]"></div>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Computer Science</span>
-                                <span className="font-medium">65%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-yellow-500 w-[65%]"></div>
-                              </div>
+                            <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={`h-full ${
+                              percentage >= 80
+                                ? "bg-green-500"
+                                : percentage >= 60
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                              }`}
+                              style={{ width: `${percentage}%` }}
+                            ></div>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="rounded-lg border p-6">
-                          <h3 className="text-lg font-medium mb-4">Difficulty Analysis</h3>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Easy</span>
-                                <span className="font-medium">95%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 w-[95%]"></div>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Medium</span>
-                                <span className="font-medium">82%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 w-[82%]"></div>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Hard</span>
-                                <span className="font-medium">68%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-yellow-500 w-[68%]"></div>
-                              </div>
-                            </div>
-                          </div>
+                          );
+                        })}
                         </div>
                       </div>
-                    </CardContent>
+
+                      <div className="rounded-lg border p-6">
+                        <h3 className="text-lg font-medium mb-4">Test Summary</h3>
+                        <div className="space-y-4">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Total Tests Taken</span>
+                          <span className="font-medium">{user.recent_results.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Average Score</span>
+                          <span className="font-medium">
+                          {Math.round(
+                            user.recent_results.reduce(
+                            (sum: number, result: any) => sum + (result.marks / 30) * 100,
+                            0
+                            ) / user.recent_results.length
+                          )}
+                          %
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Highest Score</span>
+                          <span className="font-medium">
+                          {Math.round(
+                            Math.max(
+                            ...user.recent_results.map(
+                              (result: any) => (result.marks / 30) * 100
+                            )
+                            )
+                          )}
+                          %
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Lowest Score</span>
+                          <span className="font-medium">
+                          {Math.round(
+                            Math.min(
+                            ...user.recent_results.map(
+                              (result: any) => (result.marks / 30) * 100
+                            )
+                            )
+                          )}
+                          %
+                          </span>
+                        </div>
+                        </div>
+                      </div>
+                      </div>
+                    </>
+                    ) : (
+                    <div className="rounded-lg border p-6 text-center">
+                      <p className="text-muted-foreground">No test results available yet.</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                      Take some tests to see your performance analytics here.
+                      </p>
+                    </div>
+                    )}
+                  </CardContent>
+                  {user.recent_results && user.recent_results.length > 0 && (
                     <CardFooter className="border-t pt-6">
-                      <Button variant="outline">Download Report</Button>
+                    <Button variant="outline">Download Report</Button>
                     </CardFooter>
+                  )}
                   </Card>
                 </TabsContent>
               </Tabs>
